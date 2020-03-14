@@ -1,5 +1,5 @@
 # IrisStein
-Shitty and laggy raycaster engine in the Iris engine by Ciastex.
+Shitty and laggy raycaster engine in the [Iris engine by Ciastex](https://github.com/Ciastex/Iris).
 
 # Bugs/Issues
 Iris is bugged so sprites wont render unless you use my fork, and shit will immediately crash if you dont as well  
