@@ -93,11 +93,11 @@ namespace IrisStein
         public int MapHeight;
         public int ScreenWidth;
         public int ScreenHeight;
-        public int TextureWidth = 64;
-        public int TextureHeight = 64;
+        public uint TextureWidth = 64;
+        public uint TextureHeight = 64;
 
-        public static int ScreenWidthDivision = 3;
-        public static int ScreenHeightDivision = 2;
+        public static int ScreenWidthDivision = 1;
+        public static int ScreenHeightDivision = 1;
 
         public Object[,] SpriteMap;
 
@@ -115,6 +115,7 @@ namespace IrisStein
         private double viewDist;
 
         private Color[,] WallPixels;
+        private Texture[] WallTextures;
 
         private string FPSText = "";
 
@@ -151,13 +152,15 @@ namespace IrisStein
             // Load wall spritesheet into memory
             Sprite AllWallsSprite = Content.Load<Sprite>("walls.jpeg");
             Texture AllWalls = AllWallsSprite.Texture;
-            int CellColumns = (int)AllWalls.Width / TextureWidth;
-            int CellRows = (int)AllWalls.Height / TextureHeight;
+            int CellColumns = (int)AllWalls.Width / (int)TextureWidth;
+            int CellRows = (int)AllWalls.Height / (int)TextureHeight;
             WallPixels = new Color[CellColumns * CellRows, TextureWidth * TextureHeight];
+            WallTextures = new Texture[CellColumns * CellRows];
             for (int cellY = 0; cellY < CellRows; cellY++)
             {
                 for (int cellX = 0; cellX < CellColumns; cellX++)
                 {
+                    WallTextures[(CellColumns * cellY) + cellX] = new Texture(TextureWidth, TextureHeight);
                     for (int texX = 0; texX < TextureWidth; texX++)
                     {
                         for (int texY = 0; texY < TextureHeight; texY++)
@@ -165,6 +168,11 @@ namespace IrisStein
                             WallPixels[(CellColumns * cellY) + cellX, TextureWidth * texX + texY] =
                                 AllWalls.GetPixel((uint)((cellX * TextureWidth) + texX),
                                 (uint)((cellY * TextureHeight) + texY));
+                            WallTextures[(CellColumns * cellY) + cellX].SetPixel(
+                                (uint)texX, (uint)texY,
+                                AllWalls.GetPixel((uint)((cellX * TextureWidth) + texX),
+                                (uint)((cellY * TextureHeight) + texY))
+                                );
                         }
                     }
                 }
@@ -300,33 +308,27 @@ namespace IrisStein
 
                 // Calculate the X coordinate of the txture
                 int texX = (int)(wallX * (double)TextureWidth);
-                if (side == 0 && rayDirX > 0) texX = TextureWidth - texX - 1;
-                if (side == 1 && rayDirY < 0) texX = TextureWidth - texX - 1;
+                if (side == 0 && rayDirX > 0) texX = (int)TextureWidth - texX - 1;
+                if (side == 1 && rayDirY < 0) texX = (int)TextureWidth - texX - 1;
 
-                // How much to increase the texture coordinate per screen pixel
-                double step = 1.0 * TextureHeight / lineHeight;
-                // Starting texture coordinate
-                double texPos = (drawStart - ScreenHeight / 2 + lineHeight / 2) * step;
                 Color color;
 
                 if (!FlatRender)
                 {
-                    // Draw textures
-                    // Texture resolution is effectively cut in half by skipping 2 spaces here, TBD if this is worth it
-                    for (int y = drawStart; y < drawEnd; y += ScreenHeightDivision)
+                    // Draw textures using strips instead of pixels
+                    // I don't know why i didn't at least try this to begin with
+                    int texY = Min(drawStart, -(lineHeight - ScreenHeight) / 2);
+                    Texture stripTex = WallTextures[texNum];
+                    Sprite stripSprite = new Sprite(stripTex);
+                    stripSprite.SourceRectangle = new Rectangle(texX, 0, ScreenWidthDivision, TextureHeight);
+                    stripSprite.Position = new Vector2(x, texY);
+                    stripSprite.Scale = new Vector2(1, (float)lineHeight / TextureHeight);
+                    stripSprite.UpdateTexture();
+                    context.Draw(stripSprite);
+                    if(side == 1)
                     {
-                        // Cast the texture coordinate to integer, and mask with (TextureHeight - 1) in case of overflow
-                        int texY = (int)texPos & (TextureHeight - 1);
-                        texPos += step * ScreenHeightDivision;
-                        color = WallPixels[texNum, TextureWidth * texX + texY];
-                        // Half the brightness of the texture on Y-Sides
-                        if (side == 1)
-                        {
-                            color.R /= 2;
-                            color.G /= 2;
-                            color.B /= 2;
-                        }
-                        context.DrawLine(new Vector2(x, y), new Vector2(x + ScreenWidthDivision, y), 1, color);
+                        // Shitty solution but fuck it, sprite.Color doesn't work.
+                        DrawColorStrip(context, x, drawStart, drawEnd, new Color(0,0,0,50));
                     }
                 }
                 else
@@ -406,12 +408,8 @@ namespace IrisStein
             // Move forward if there is no wall in front of you
             if (Keyboard.IsKeyDown(KeyCode.W))
             {
-                Vector2 xDir = new Vector2(
-                    (float)(PosX + PlayerCollisionWideness + DirX * moveSpeed), 
-                    (float)(PosY + PlayerCollisionWideness));
-                Vector2 yDir = new Vector2(
-                    (float)(PosX + PlayerCollisionWideness), 
-                    (float)(PosY + PlayerCollisionWideness + DirY * moveSpeed));
+                Vector2 xDir = new Vector2((float)(PosX + DirX * moveSpeed), (float)PosY);
+                Vector2 yDir = new Vector2((float)PosX, (float)(PosY + DirY * moveSpeed));
                 if (!CheckWallCollision(xDir) && !CheckSpriteCollision(xDir)) PosX += DirX * moveSpeed;
                 if (!CheckWallCollision(yDir) && !CheckSpriteCollision(yDir)) PosY += DirY * moveSpeed;
             }
