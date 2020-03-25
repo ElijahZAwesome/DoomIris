@@ -103,6 +103,7 @@ namespace IrisStein
 
         private Font DebugFont;
         private bool FlatRender = false;
+        private bool MiniMap = false;
         #endregion
 
         private double PosX = 22.5, PosY = 11.5;
@@ -196,6 +197,8 @@ namespace IrisStein
             List<Object> spritesToDraw = new List<Object>();
             List<Object> spritesDrawn = new List<Object>();
 
+            int leftRayX = 0, leftRayY = 0, rightRayX = 0, rightRayY = 0;
+
             for (int x = 0; x <= ScreenWidth; x += ScreenWidthDivision)
             {
                 // Calculate the direction needed for the ray, and the cam space
@@ -277,6 +280,17 @@ namespace IrisStein
                 }
 
                 if (hit == 0) continue;
+
+                if(x == 0)
+                {
+                    leftRayX = mapX;
+                    leftRayY = mapY;
+                }
+                else if(x == ScreenWidth)
+                {
+                    rightRayX = mapX;
+                    rightRayY = mapY;
+                }
 
                 // Calculate distance projected on camera direction (Euclidean distance will give fisheye effect!)
                 if (side == 0)
@@ -370,6 +384,55 @@ namespace IrisStein
                     viewDist
                     );
             };
+
+            if(MiniMap)
+            {
+                // Move these to meta variables later, im tired
+                Vector2 MinimapSize = new Vector2(300, 200);
+                Vector2 MinimapPosition = new Vector2(ScreenWidth - MinimapSize.X, 0);
+                // Render minimap
+                for (int x = 0; x < MapWidth; x++)
+                {
+                    for (int y = 0; y < MapHeight; y++)
+                    {
+                        Color color;
+                        // Debugging wall colors for flat renderer
+                        switch (WorldMap[x, y])
+                        {
+                            case 1: color = Color.Red; break;
+                            case 2: color = Color.Green; break;
+                            case 3: color = Color.Blue; break;
+                            case 4: color = Color.Beige; break;
+                            case 5: color = Color.Aquamarine; break;
+                            case 6: color = Color.HotPink; break;
+                            case 7: color = Color.Purple; break;
+                            case 8: color = Color.Brown; break;
+                            default: color = Color.Yellow; break;
+                        }
+
+                        Vector2 tileSize = new Vector2(MinimapSize.X / MapWidth, MinimapSize.Y / MapHeight);
+                        Vector2 tilePos = new Vector2(tileSize.X * x, tileSize.Y * y);
+                        context.FillRectangle(MinimapPosition + tilePos, tileSize, color);
+                    }
+                }
+
+                Vector2 tileRefSize = new Vector2(MinimapSize.X / MapWidth, MinimapSize.Y / MapHeight);
+                Vector2 playerDotSize = tileRefSize / 2;
+                Vector2 playerDotPos = new Vector2(tileRefSize.X * (float)PosX, tileRefSize.Y * (float)PosY);
+                playerDotPos -= playerDotSize / 2;
+                context.FillRectangle(MinimapPosition + playerDotPos, playerDotSize, Color.Red);
+
+                context.DrawLine(MinimapPosition + playerDotPos + (playerDotSize / 2),
+                    MinimapPosition + new Vector2(tileRefSize.X * leftRayX, tileRefSize.Y * leftRayY),
+                    1,
+                    Color.Red
+                    );
+                context.DrawLine(MinimapPosition + playerDotPos + (playerDotSize / 2),
+                    MinimapPosition + new Vector2(tileRefSize.X * rightRayX, tileRefSize.Y * rightRayY),
+                    1,
+                    Color.Red
+                    );
+            }
 
             stopwatch.Stop();
             FPSText += $"\nRender Stopwatch: {stopwatch.ElapsedMilliseconds}";
@@ -470,6 +533,11 @@ namespace IrisStein
             if (keyCode == KeyCode.F)
             {
                 FlatRender = !FlatRender;
+            }
+
+            if (keyCode == KeyCode.M)
+            {
+                MiniMap = !MiniMap;
             }
         }
     }
