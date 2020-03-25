@@ -103,6 +103,7 @@ namespace IrisStein
 
         private Font DebugFont;
         private bool FlatRender = false;
+        private bool RenderSprites = true;
         private bool MiniMap = false;
         #endregion
 
@@ -374,16 +375,19 @@ namespace IrisStein
                 }
             }
 
-            // Render sprites
-            foreach (Object sprite in spritesToDraw)
+            if (RenderSprites)
             {
-                sprite.Draw(context,
-                    new Vector2((float)PosX, (float)PosY),
-                    new Vector2((float)DirX, (float)DirY),
-                    new Vector2(ScreenWidth, ScreenHeight),
-                    viewDist
-                    );
-            };
+                // Render sprites
+                foreach (Object sprite in spritesToDraw)
+                {
+                    sprite.Draw(context,
+                        new Vector2((float)PosX, (float)PosY),
+                        new Vector2((float)DirX, (float)DirY),
+                        new Vector2(ScreenWidth, ScreenHeight),
+                        viewDist
+                        );
+                };
+            }
 
             if(MiniMap)
             {
@@ -435,7 +439,10 @@ namespace IrisStein
             }
 
             stopwatch.Stop();
-            FPSText += $"\nRender Stopwatch: {stopwatch.ElapsedMilliseconds}";
+            FPSText += $"\nRender Stopwatch: {stopwatch.ElapsedMilliseconds}\n" +
+                $"F: Toggle Flat Rendering\n" +
+                $"M: Toggle Minimap Rendering\n" +
+                $"N: Toggle Sprite Rendering";
 
             context.DrawString(DebugFont, FPSText, Vector2.Zero, Color.Red);
         }
@@ -538,6 +545,11 @@ namespace IrisStein
             if (keyCode == KeyCode.M)
             {
                 MiniMap = !MiniMap;
+            }
+
+            if (keyCode == KeyCode.N)
+            {
+                RenderSprites = !RenderSprites;
             }
         }
     }
